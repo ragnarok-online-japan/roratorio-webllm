@@ -120,20 +120,33 @@ function parseYaml<T>(content: string): T[] {
  */
 async function getCachedData<T>(db: IDBDatabase, key: string): Promise<T | null> {
     return new Promise((resolve) => {
-        const transaction = db.transaction([RAG_CONFIG.CACHE_STORE_NAME], 'readonly')
-        const store = transaction.objectStore(RAG_CONFIG.CACHE_STORE_NAME)
-        const request = store.get(key)
+        try {
+            const transaction = db.transaction([RAG_CONFIG.CACHE_STORE_NAME], 'readonly')
+            const store = transaction.objectStore(RAG_CONFIG.CACHE_STORE_NAME)
+            const request = store.get(key)
 
-        request.onsuccess = () => {
-            const cached = request.result as { data: T; timestamp: number } | undefined
-            if (cached && Date.now() - cached.timestamp < RAG_CONFIG.CACHE_TTL_MS) {
-                resolve(cached.data)
-            } else {
+            request.onsuccess = () => {
+                const cached = request.result as { data: T; timestamp: number } | undefined
+                if (cached && Date.now() - cached.timestamp < RAG_CONFIG.CACHE_TTL_MS) {
+                    resolve(cached.data)
+                } else {
+                    resolve(null)
+                }
+            }
+
+            request.onerror = () => {
+                console.warn(`[RAG] Failed to read cache for ${key}`)
                 resolve(null)
             }
-        }
 
-        request.onerror = () => resolve(null)
+            transaction.onerror = () => {
+                console.warn(`[RAG] Transaction error reading cache for ${key}`)
+                resolve(null)
+            }
+        } catch (error) {
+            console.warn(`[RAG] Error accessing cache for ${key}:`, error)
+            resolve(null)
+        }
     })
 }
 
@@ -141,13 +154,27 @@ async function getCachedData<T>(db: IDBDatabase, key: string): Promise<T | null>
  * キャッシュにデータを保存
  */
 async function setCacheData<T>(db: IDBDatabase, key: string, data: T): Promise<void> {
-    return new Promise((resolve, reject) => {
-        const transaction = db.transaction([RAG_CONFIG.CACHE_STORE_NAME], 'readwrite')
-        const store = transaction.objectStore(RAG_CONFIG.CACHE_STORE_NAME)
-        const request = store.put({ key, data, timestamp: Date.now() })
+    return new Promise((resolve) => {
+        try {
+            const transaction = db.transaction([RAG_CONFIG.CACHE_STORE_NAME], 'readwrite')
+            const store = transaction.objectStore(RAG_CONFIG.CACHE_STORE_NAME)
+            const request = store.put({ key, data, timestamp: Date.now() })
 
-        request.onerror = () => reject(new Error(`Failed to cache ${key}`))
-        request.onsuccess = () => resolve()
+            request.onerror = () => {
+                console.warn(`[RAG] Failed to write cache for ${key}`)
+                resolve()  // エラーでも続行
+            }
+
+            request.onsuccess = () => resolve()
+
+            transaction.onerror = () => {
+                console.warn(`[RAG] Transaction error writing cache for ${key}`)
+                resolve()  // エラーでも続行
+            }
+        } catch (error) {
+            console.warn(`[RAG] Error writing cache for ${key}:`, error)
+            resolve()  // エラーでも続行
+        }
     })
 }
 

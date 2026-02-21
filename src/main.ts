@@ -89,7 +89,7 @@ async function initializeDatabase(): Promise<void> {
         request.onupgradeneeded = (event) => {
             const db = (event.target as IDBOpenDBRequest).result
 
-            // オブジェクトストアが存在しない場合に作成
+            // チャット履歴用オブジェクトストア作成
             if (!db.objectStoreNames.contains(DB_CONFIG.STORE_NAME)) {
                 const store = db.createObjectStore(DB_CONFIG.STORE_NAME, {
                     keyPath: 'id',
@@ -97,6 +97,13 @@ async function initializeDatabase(): Promise<void> {
                 })
                 store.createIndex(DB_CONFIG.INDEX_NAME, 'timestamp', {
                     unique: false,
+                })
+            }
+
+            // RAGキャッシュ用オブジェクトストア作成
+            if (!db.objectStoreNames.contains('rawData')) {
+                db.createObjectStore('rawData', {
+                    keyPath: 'key',
                 })
             }
         }
