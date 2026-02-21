@@ -218,6 +218,6 @@ IndexedDBキャッシュ: 未実装
 
 **未実装：**
 - ❌ 装備最適化推奨エンジン（`recommendEquipment()`） - 型定義のみ、ロジック未実装
-- ❌ IndexedDB RAGキャッシング（7日TTL） - `RoDataCache` スキーマ未実装
+- ❌ IndexedDB RAGキャッシング（24時間TTL） - `RoDataCache` スキーマ未実装
 - ❌ UI最適化 - RAG結果の視覚的改善・スタイリング
 - ❌ テスト実装 - 単体テスト、E2Eテスト
