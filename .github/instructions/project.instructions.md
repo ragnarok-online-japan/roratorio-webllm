@@ -89,9 +89,9 @@ applyTo: "**"
 #### ファイル構成
 ```
 src/rag/
-  ├── types.ts          # 型定義（Item, Skill, Job等）
-  ├── loaders.ts        # YAML取得・zstd解凍
-  └── rag.ts            # 検索・推奨ロジック
+  ├── types.ts          # 型定義（JobDataParameter, SkillDataParameter, ItemDataParameter等）
+  ├── loaders.ts        # YAML取得・zstd解凍・キャッシング
+  └── rag.ts            # 検索・装備推奨ロジック
 ```
 
 #### 主要機能
@@ -139,19 +139,63 @@ const ragResults = searchAll(ragContext, userMessage, { items: 3, skills: 2, job
 ```
 
 #### 型定義
-- `Item`: アイテム情報（攻撃力、防御力、スロット等）
-- `Skill`: スキル情報（スキルレベル、コスト、要件等）
-- `Job`: 職業情報（基本ステータス、習得スキル等）
-- `RAGContext`: キャッシュ化されたデータマップ
-- `RAGSearchResult`: 検索結果エントリ
-- `PlayerProfile`: プレイヤーのビルド情報
-- `EquipmentRecommendation`: 推奨装備セット
+- `JobDataParameter`: ラグナロクオンライン職業データ
+  - 基本属性: `id_name`, `id_num`, `name`, `name_ja`, `name_alias`
+  - ステータス: `hp_basic_values`, `sp_basic_values`, `status_basic_max`
+  - スキル: `learned_skills`, `passive_skills`, `attack_skills`
+  - 装備: `allow_equipment_weapons_type`
+
+- `SkillDataParameter`: ラグナロクオンラインスキルデータ
+  - 基本属性: `id`, `id_num`, `name`, `max_lv`
+  - コスト: `sp_amount`（レベル別）
+  - 範囲: `attack_range`（レベル別）
+  - 要件: `need_skill_list`（依存スキル）
+
+- `ItemDataParameter`: ラグナロクオンラインアイテムデータ
+  - 基本属性: `id`, `displayname`, `type`, `slot`
+  - ステータス: `atk`, `matk`, `def`, `mdef`
+  - 装備位置: `position`, `card_position`
+  - 効果: `stats`, `damage_bonus`, `auto_spells`
+  - セット効果: `set_bonus`, `set_penalty`
+  - 精錬ボーナス: `refine_bonus`, `refine_skill_bonus`
+
+- `RAGContext`: キャッシュ化されたRA Gデータセット
+  - `items`: アイテムマップ（ID → ItemDataParameter）
+  - `skills`: スキルマップ（ID/名前 → SkillDataParameter）
+  - `jobs`: 職業マップ（ID/名前 → JobDataParameter）
+  - `lastUpdated`: データ更新時刻
+
+- `PlayerProfile`: プレイヤープロフィール
+  - 職業: `jobId`, `jobName`
+  - レベル: `baseLevel`, `jobLevel`
+  - ステータス: `str`, `agi`, `vit`, `int`, `dex`, `luk`
+
+- `EquipmentRecommendation`: 装備推奨結果
+  - 職業: `jobId`, `jobName`
+  - 装備セット: `equipmentSet`（スロット → ItemDataParameter）
+  - スコア: `totalAtk`, `totalMatk`, `totalDef`, `totalMdef`
+  - スキルシナジー: `skillSynergies`
 
 #### エラーハンドリング
-- ネットワークエラー：キャッシュにフォールバック
-- YAML解析エラー：詳細ログ出力、処理継続
-- RAG検索エラー：スキップしてメッセージ送信継続
+- ネットワークエラー：キャッシュにフォールバック、データなしで継続
+- YAML解析エラー：詳細ログ出力、空配列を返却
+- RAG検索エラー：検索スキップしてメッセージ送信継続
+- zstd解凍エラー：詳細エラーログ出力
 
 **依存パッケージ:**
-- `@hpcc-js/wasm-zstd`: zstd圧縮ファイルの解凍
+- `@hpcc-js/wasm-zstd`: zstd圧縮ファイルの仕様WAフォーマット解凍
 - `js-yaml`: YAMLファイルのパース
+
+**キャッシング構成:**
+```
+データベース: RoDataCache (v1)
+オブジェクトストア: rawData
+- キー: "items", "skills", "jobs"
+- 値: { key, data, timestamp }
+- TTL: 7日間
+```
+
+**パフォーマンス最適化:**
+- zstd解凍後のYAMLパース結果をMapキャッシュ
+- Mapキーとして id_num, id_name, name を複数記録
+- 検索結果はキャッシュではなく毎回計算（常に最新の関連性スコア）
