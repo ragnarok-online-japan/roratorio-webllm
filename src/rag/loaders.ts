@@ -292,20 +292,27 @@ export async function initializeRAGContext(db?: IDBDatabase): Promise<RAGContext
             loadJobs(db),
         ])
 
+        console.log(`[RAG] Raw data loaded: ${items.length} items, ${skills.length} skills, ${jobs.length} jobs`)
+
         const itemMap = new Map<number, ItemDataParameter>()
         const skillMap = new Map<number | string, SkillDataParameter>()
         const jobMap = new Map<number | string, JobDataParameter>()
 
         items.forEach((item) => itemMap.set(item.id, item))
+        console.log(`[RAG] Items mapped: ${itemMap.size} entries in itemMap`)
+
         skills.forEach((skill) => {
             skillMap.set(skill.id_num, skill)
             skillMap.set(skill.id, skill)
         })
+        console.log(`[RAG] Skills mapped: ${skillMap.size} entries in skillMap`)
+
         jobs.forEach((job) => {
             jobMap.set(job.id_num, job)
             jobMap.set(job.id_name, job)
             jobMap.set(job.name, job)
         })
+        console.log(`[RAG] Jobs mapped: ${jobMap.size} entries in jobMap`)
 
         const context: RAGContext = {
             items: itemMap,
@@ -316,6 +323,14 @@ export async function initializeRAGContext(db?: IDBDatabase): Promise<RAGContext
         }
 
         console.log('[RAG] RAG context initialized successfully')
+        console.log(`[RAG] RAGContext ready: ${itemMap.size} items, ${skillMap.size} skills, ${jobMap.size} jobs`)
+
+        // ブラウザコンソールでアクセス可能にする
+        if (typeof window !== 'undefined') {
+            (window as any).__RAG_CONTEXT__ = context
+            console.log('[RAG] RAGContext available as window.__RAG_CONTEXT__')
+        }
+
         return context
     } catch (error) {
         console.error('[RAG] Failed to initialize RAG context:', error)

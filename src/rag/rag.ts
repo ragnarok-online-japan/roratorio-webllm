@@ -46,6 +46,8 @@ export function searchItems(
     limit: number = RAG_CONFIG.SEARCH_MAX_RESULTS.items
 ): RAGSearchResult[] {
     const results: RAGSearchResult[] = []
+    const itemCount = context.items.size
+    console.log(`[RAG] searchItems: Searching in ${itemCount} items with query: "${query}"`)
 
     context.items.forEach((item) => {
         let score = 0
@@ -207,6 +209,9 @@ export function searchAll(
 ): RAGResponse {
     const startTime = performance.now()
 
+    console.log(`[RAG] searchAll called with query: "${query}"`)
+    console.log(`[RAG] Available data: ${context.items.size} items, ${context.skills.size} skills, ${context.jobs.size} jobs`)
+
     const itemResults = searchItems(context, query, limits?.items ?? RAG_CONFIG.SEARCH_MAX_RESULTS.items)
     const skillResults = searchSkills(context, query, limits?.skills ?? RAG_CONFIG.SEARCH_MAX_RESULTS.skills)
     const jobResults = searchJobs(context, query, limits?.jobs ?? RAG_CONFIG.SEARCH_MAX_RESULTS.jobs)
@@ -214,6 +219,8 @@ export function searchAll(
     const allResults = [...itemResults, ...skillResults, ...jobResults]
 
     const executionTime = performance.now() - startTime
+
+    console.log(`[RAG] Search results: ${itemResults.length} items, ${skillResults.length} skills, ${jobResults.length} jobs (${executionTime.toFixed(2)}ms)`)
 
     return {
         results: allResults,

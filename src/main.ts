@@ -43,8 +43,8 @@ interface AppState {
 
 const AVAILABLE_MODELS = [
     'Llama-3.1-8B-Instruct-q4f32_1-MLC',
-    'Mistral-7B-Instruct-v0.3-q4f32_1-MLC',
-    'NeuralHermes-2.5-Mistral-7B-q4f16_1-MLC',
+    // 'Mistral-7B-Instruct-v0.3-q4f32_1-MLC', //Disabled
+    // 'NeuralHermes-2.5-Mistral-7B-q4f16_1-MLC', //Disabled
 ] as const
 
 const state: AppState = {
@@ -384,16 +384,24 @@ async function sendMessage(userMessage: string): Promise<void> {
                     skills: 2,
                     jobs: 1,
                 })
+                console.log(`[App] RAG search executed: ${ragResults.totalResults} results found`)
+                console.log(`[App] RAG search details:`, ragResults)
+
                 if (ragResults.totalResults > 0) {
                     ragContextMessage = `\n\n【ラグナロクオンライン情報】\n${ragResults.results
                         .slice(0, 5)
                         .map((r) => `- ${r.name} (${r.type}): ${r.matchReason}`)
                         .join('\n')}`
+                    console.log(`[App] RAG context message added to LLM prompt:`, ragContextMessage)
+                } else {
+                    console.log('[App] No RAG results found for query:', userMessage)
                 }
             } catch (ragError) {
                 console.error('RAG search error:', ragError)
                 // RAGエラーはスキップして続行
             }
+        } else {
+            console.warn('[App] RAGContext not available')
         }
 
         // LLMのメッセージ配列を構築（RAGコンテキスト付き）
@@ -482,7 +490,20 @@ async function initialize(): Promise<void> {
         try {
             statusElement.textContent = 'RAGデータを読み込み中...'
             state.ragContext = await initializeRAGContext(state.db || undefined)
-            statusElement.textContent = 'RAGデータの読み込み完了'
+
+            // RAGContext初期化確認
+            if (state.ragContext) {
+                console.log('[App] RAGContext initialized successfully')
+                console.log(`[App] RAGContext status:`)
+                console.log(`  - Items: ${state.ragContext.items.size}`)
+                console.log(`  - Skills: ${state.ragContext.skills.size}`)
+                console.log(`  - Jobs: ${state.ragContext.jobs.size}`)
+                console.log(`[App] RAG search is now available for chat context`)
+                statusElement.textContent = 'RAGデータの読み込み完了'
+            } else {
+                console.warn('[App] RAGContext is null after initialization')
+                statusElement.textContent = 'RAGデータの読み込みに失敗しました（メッセージ送信は可能）'
+            }
         } catch (ragError) {
             console.error('RAG initialization error:', ragError)
             statusElement.textContent = 'RAGデータの読み込みに失敗しました（メッセージ送信は可能）'
