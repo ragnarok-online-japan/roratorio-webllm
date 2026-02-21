@@ -75,6 +75,7 @@ applyTo: "**"
 
 ### RAG（検索拡張生成）機能 - ラグナロクオンライン装備最適化
 実装日: 2026-02-21
+**ステータス**: 🔄 部分実装
 
 **概要:**
 ラグナロクオンライン（Ragnarok Online）の装備最適化を目的としたRAG機能を実装。zstd圧縮形式のYAMLファイルからアイテム・スキル・職業情報を取得し、LLMの質問に対してゲーム内容を踏まえた回答を生成します。
@@ -102,9 +103,9 @@ src/rag/
 - エラーハンドリング完備
 
 **2. キャッシング機構 (loaders.ts)**
-- IndexedDB (`RoDataCache v1`) に取得したデータを保存
-- キャッシュ有効期限: 7日間
-- ネットワーク障害時の代替手段として機能
+- メモリMapキャッシング：初期化時にアイテム・スキル・職業をMapに格納
+- IndexedDB RAGキャッシング：`RoDataCache v1` スキーマ未実装
+  - 将来実装：7日間TTLでネットワーク障害時の代替手段として機能予定
 
 **3. 検索機能 (rag.ts)**
 - `searchItems()`: キーワードでアイテムを検索
@@ -121,9 +122,8 @@ src/rag/
 - スコア順にソート、指定件数を返却
 
 **5. 装備最適化推奨エンジン (rag.ts)**
-- `recommendEquipment()`: プレイヤープロフィールに基づいて装備を推奨
-- 職業別の制約チェック
-- 各装備スロット（武器、防具、ガーメント等）の最適化
+- `recommendEquipment()`: 型定義のみ実装、ロジック未実装
+- 今後の実装項目：職業別の制約チェック・各装備スロット最適化
 
 #### LLM統合
 - ユーザーメッセージをRAGで検索
@@ -188,14 +188,36 @@ const ragResults = searchAll(ragContext, userMessage, { items: 3, skills: 2, job
 
 **キャッシング構成:**
 ```
-データベース: RoDataCache (v1)
-オブジェクトストア: rawData
+メモリキャッシュ: 実装済み
+- items: Map<number, ItemDataParameter>（14,864エントリ）
+- skills: Map<number | string, SkillDataParameter>（3,689エントリ）
+- jobs: Map<number | string, JobDataParameter>（255エントリ）
+
+IndexedDBキャッシュ: 未実装
+- データベース: RoDataCache (v1)
+- オブジェクトストア: rawData
 - キー: "items", "skills", "jobs"
-- 値: { key, data, timestamp }
-- TTL: 7日間
+- TTL: 7日間（予定）
 ```
 
 **パフォーマンス最適化:**
 - zstd解凍後のYAMLパース結果をMapキャッシュ
 - Mapキーとして id_num, id_name, name を複数記録
 - 検索結果はキャッシュではなく毎回計算（常に最新の関連性スコア）
+
+**実装完了の確認（2026-02-21）:**
+
+**実装済み:**
+- ✅ zstd WebAssembly解凍モジュール統合（インスタンスキャッシング）
+- ✅ YAML キー・バリュー形式パーサ実装
+- ✅ Mapベースメモリキャッシング（複数キー対応）
+- ✅ RAG検索機能実装（searchAll, searchItems, searchSkills, searchJobs）
+- ✅ LLMプロンプト自動統合（【ラグナロクオンライン情報】セクション表示）
+- ✅ エラーハンドリング・グレースフルデグラデーション実装
+- ✅ デバッグログ最小化（本番環境対応）
+
+**未実装：**
+- ❌ 装備最適化推奨エンジン（`recommendEquipment()`） - 型定義のみ、ロジック未実装
+- ❌ IndexedDB RAGキャッシング（7日TTL） - `RoDataCache` スキーマ未実装
+- ❌ UI最適化 - RAG結果の視覚的改善・スタイリング
+- ❌ テスト実装 - 単体テスト、E2Eテスト
