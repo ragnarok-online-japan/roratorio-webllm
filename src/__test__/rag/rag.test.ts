@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { searchItems, searchSkills, searchJobs, searchAll } from './rag'
-import type { RAGContext, ItemDataParameter, SkillDataParameter, JobDataParameter } from './types'
+import { searchItems, searchSkills, searchJobs, searchAll } from '../../rag/rag'
+import type { RAGContext, ItemDataParameter, SkillDataParameter, JobDataParameter } from '../../rag/types'
 
 describe('RAG Search Functions', () => {
     let ragContext: RAGContext

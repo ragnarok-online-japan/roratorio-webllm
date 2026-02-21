@@ -1,11 +1,11 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import {
     detectInjection,
     compileMessageWithSystemPrompt,
     getInjectionWarningMessage,
     shouldBlockMessage,
-} from './loaders'
-import type { PromptConfig, InjectionDetectionResult } from './types'
+} from '../../prompts/loaders'
+import type { PromptConfig, InjectionDetectionResult } from '../../prompts/types'
 
 describe('Prompts Module', () => {
     let config: PromptConfig

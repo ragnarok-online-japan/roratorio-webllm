@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import { initializeZstd } from './loaders'
+import { initializeZstd } from '../../rag/loaders'
 
 describe('RAG Loaders Module', () => {
     afterEach(() => {
