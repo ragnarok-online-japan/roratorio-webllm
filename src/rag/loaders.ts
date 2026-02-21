@@ -107,16 +107,35 @@ function parseYaml<T>(content: string): T[] {
 
         // ルートがオブジェクトの場合、その値から配列を抽出
         if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-            // オブジェクトの最初の値を取得（配列であると仮定）
+            // オブジェクトのキーを確認
+            const keys = Object.keys(parsed)
+            console.log('[RAG] YAML root is object with keys:', keys)
+
+            // まず "data" キーを探す（共通パターン）
+            if ('data' in parsed && Array.isArray((parsed as any).data)) {
+                console.log('[RAG] Found array at "data" property, extracting...')
+                return (parsed as any).data as T[]
+            }
+
+            // 次に最初のプロパティで配列を探す
             const values = Object.values(parsed)
             if (values.length > 0 && Array.isArray(values[0])) {
-                console.log('[RAG] YAML root is object, extracting array from first property')
+                console.log('[RAG] Found array at first property, extracting...')
                 return values[0] as T[]
+            }
+
+            // すべてのプロパティをチェック
+            for (const [key, value] of Object.entries(parsed)) {
+                if (Array.isArray(value)) {
+                    console.log(`[RAG] Found array at property "${key}", extracting...`)
+                    return value as T[]
+                }
             }
         }
 
         if (!Array.isArray(parsed)) {
             console.warn('[RAG] YAML parse result is not an array:', typeof parsed)
+            console.warn('[RAG] Parsed structure:', JSON.stringify(parsed).substring(0, 200))
             return []
         }
         return parsed as T[]
