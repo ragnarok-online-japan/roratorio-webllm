@@ -7,6 +7,73 @@ import YAML from 'js-yaml'
 import type { ItemDataParameter, SkillDataParameter, JobDataParameter, RAGContext } from './types'
 import { RAG_CONFIG } from './types'
 
+// Zstd インスタンスのキャッシュ（初期化済みインスタンス）
+let zstdInstance: any = null
+// 初期化中の Promise をキャッシュ（並列呼び出しでも 1 回だけロード）
+let zstdInstancePromise: Promise<any> | null = null
+
+/**
+ * Zstdインスタンスの初期化（統一された初期化関数）
+ */
+export async function initializeZstd(): Promise<any> {
+    // 既に初期化済みならそのまま返す
+    if (zstdInstance) {
+        return zstdInstance
+    }
+
+    if (!zstdInstancePromise) {
+        // 初期化中の Promise をキャッシュし、失敗時はキャッシュをリセットして再試行可能にする
+        zstdInstancePromise = (async () => {
+            const { Zstd } = await import('@hpcc-js/wasm-zstd')
+            const instance = await Zstd.load()
+            zstdInstance = instance  // 初期化完了後、インスタンスをキャッシュ
+            return instance
+        })()
+            .catch((err) => {
+                // 初期化に失敗した場合は次回の呼び出しで再試行できるようにリセット
+                console.error('[RAG] zstd initialization failed:', err)
+                zstdInstancePromise = null
+                throw err
+            })
+    }
+    return zstdInstancePromise
+}
+
+/**
+ * ファイル読み込み
+ */
+async function loadFileAsUint8Array(url: string): Promise<Uint8Array> {
+    const response = await fetch(url)
+    return new Uint8Array(await response.arrayBuffer())
+}
+
+/**
+ * zstdで展開（非同期）
+ */
+async function zstdDecompressAsync(compressed: Uint8Array): Promise<Uint8Array | null> {
+    try {
+        const zstd = await initializeZstd()
+        // zstd.decompress() で zstd データを展開
+        const result = await zstd.decompress(compressed)
+        return result
+    } catch (err) {
+        console.error('[RAG] Error decompressing:', err)
+        return null
+    }
+}
+
+/**
+ * zstdで展開して文字列に変換
+ */
+async function zstdDecompressString(compressed: Uint8Array): Promise<string | null> {
+    const decompressed = await zstdDecompressAsync(compressed)
+    if (decompressed) {
+        const decoder = new TextDecoder()
+        return decoder.decode(decompressed)
+    }
+    return null
+}
+
 /**
  * zstd圧縮ファイルを取得・解凍
  */
@@ -14,23 +81,15 @@ async function fetchAndDecompressZstd(url: string): Promise<string> {
     console.log(`[RAG] Fetching from ${url}`)
 
     try {
-        const response = await fetch(url)
-        if (!response.ok) {
-            throw new Error(`Failed to fetch ${url}: ${response.statusText}`)
-        }
-
-        const compressed = await response.arrayBuffer()
+        // ファイルを取得
+        const compressed = await loadFileAsUint8Array(url)
         console.log(`[RAG] Decompressing ${compressed.byteLength} bytes`)
 
-        // @hpcc-js/wasm-zstd を動的にインポート
-        const zstdModule = await import('@hpcc-js/wasm-zstd') as any
-        // decompress 関数を取得（モジュール構造に応じて対応）
-        const decompress = zstdModule.decompress || zstdModule.default?.decompress || zstdModule.Zstd?.decompress
-        if (!decompress) {
-            throw new Error('decompress function not found in zstd module')
+        // zstdで展開して文字列に変換
+        const text = await zstdDecompressString(compressed)
+        if (!text) {
+            throw new Error('Failed to decompress zstd data')
         }
-        const decompressed = decompress(new Uint8Array(compressed))
-        const text = new TextDecoder().decode(decompressed)
 
         return text
     } catch (error) {
@@ -221,4 +280,16 @@ export async function initializeRAGContext(db?: IDBDatabase): Promise<RAGContext
         console.error('[RAG] Failed to initialize RAG context:', error)
         throw error
     }
+}
+/**
+ * ブラウザ環境でのみ初期化を実行（アプリケーション起動時にzstdをプリロード）
+ */
+if (typeof window !== 'undefined') {
+    initializeZstd()
+        .then(() => {
+            console.log('[RAG] Zstd initialized successfully on application startup')
+        })
+        .catch((err) => {
+            console.error('[RAG] zstd initialization failed on startup:', err)
+        })
 }
