@@ -1,10 +1,10 @@
-# WebLLM Vanilla Framework
+# ROラトリオ WebLLM
 
 WebGPUを活用した高性能ブラウザ内LLMチャットアプリケーション
 
 ## 概要
 
-WebLLM Vanilla Framework は、[WebLLM](https://github.com/mlc-ai/web-llm) とWebGPU を使用して、
+ROラトリオ WebLLM は、[WebLLM](https://github.com/mlc-ai/web-llm) とWebGPU を使用して、
 サーバーサイド処理なしにブラウザ内で大規模言語モデル（LLM）を実行できるVanilla TypeScriptチャットアプリケーションです。
 
 すべての計算はブラウザ内で完結するため、プライバシー保護と高速なレスポンスを実現します。
@@ -29,8 +29,8 @@ WebLLM Vanilla Framework は、[WebLLM](https://github.com/mlc-ai/web-llm) とWe
 ### インストール
 
 ```bash
-git clone https://github.com/m10i-0nyx/webllm-vanilla-framework
-cd webllm-vanilla-framework
+git clone https://github.com/ragnarok-online-japan/webllm-roratorio
+cd webllm-roratorio
 pnpm install
 ```
 
@@ -177,6 +177,9 @@ pnpm dev
 ### IndexedDB
 
 - [MDN IndexedDB](https://developer.mozilla.org/ja/docs/Web/API/IndexedDB_API)
+
+### Fork元
+- [WebLLM Vanilla Framework](https://github.com/m10i-0nyx/webllm-vanilla-framework)
 
 ## 🐛 トラブルシューティング
 

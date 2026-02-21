@@ -2,14 +2,15 @@
 applyTo: "**"
 ---
 
-# WebLLM Vanilla Framework 実装ガイドライン
+# ROラトリオ WebLLM 実装ガイドライン
 
 ## 概要
 
-- WebGPUを活用するWebLLMのフロントエンドアプリケーションを提供すること
+- WebGPUを活用するROラトリオ WebLLMのフロントエンドアプリケーションを提供すること
 
 ## アーキテクチャ
 - WebLLM : https://github.com/mlc-ai/web-llm
+- Forkされたリポジトリ: https://github.com/m10i-0nyx/webllm-vanilla-framework
 - 開発言語はTypeScriptを使用すること
 - パッケージマネージャーはpnpmを使用すること
 
