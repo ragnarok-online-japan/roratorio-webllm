@@ -100,45 +100,29 @@ async function fetchAndDecompressZstd(url: string): Promise<string> {
 
 /**
  * YAMLをパース
+ * YAML形式: キー・バリュー形式のオブジェクト { id: data, id: data, ... }
+ * 配列に変換して返す
  */
 function parseYaml<T>(content: string): T[] {
     try {
         const parsed = YAML.load(content)
 
-        // ルートがオブジェクトの場合、その値から配列を抽出
+        // ルートがオブジェクトの場合、Object.values()で配列に変換
         if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-            // オブジェクトのキーを確認
-            const keys = Object.keys(parsed)
-            console.log('[RAG] YAML root is object with keys:', keys)
-
-            // まず "data" キーを探す（共通パターン）
-            if ('data' in parsed && Array.isArray((parsed as any).data)) {
-                console.log('[RAG] Found array at "data" property, extracting...')
-                return (parsed as any).data as T[]
-            }
-
-            // 次に最初のプロパティで配列を探す
             const values = Object.values(parsed)
-            if (values.length > 0 && Array.isArray(values[0])) {
-                console.log('[RAG] Found array at first property, extracting...')
-                return values[0] as T[]
-            }
-
-            // すべてのプロパティをチェック
-            for (const [key, value] of Object.entries(parsed)) {
-                if (Array.isArray(value)) {
-                    console.log(`[RAG] Found array at property "${key}", extracting...`)
-                    return value as T[]
-                }
+            if (values.length > 0) {
+                console.log(`[RAG] Converted object with ${values.length} entries to array`)
+                return values as T[]
             }
         }
 
-        if (!Array.isArray(parsed)) {
-            console.warn('[RAG] YAML parse result is not an array:', typeof parsed)
-            console.warn('[RAG] Parsed structure:', JSON.stringify(parsed).substring(0, 200))
-            return []
+        // 既に配列の場合はそのまま返す
+        if (Array.isArray(parsed)) {
+            return parsed as T[]
         }
-        return parsed as T[]
+
+        console.warn('[RAG] YAML parse result is neither object nor array:', typeof parsed)
+        return []
     } catch (error) {
         console.error('[RAG] YAML parse error:', error)
         throw new Error(`Failed to parse YAML: ${error instanceof Error ? error.message : String(error)}`)
