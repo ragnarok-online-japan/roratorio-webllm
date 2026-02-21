@@ -76,6 +76,9 @@ const clearButton = document.querySelector<HTMLButtonElement>('#clear-button')!
 const errorDialog = document.querySelector<HTMLDivElement>('#error-dialog')!
 const dialogCloseButton = document.querySelector<HTMLButtonElement>('#dialog-close-button')!
 const spinnerContainer = document.querySelector<HTMLDivElement>('#spinner-container')!
+const configErrorDialog = document.querySelector<HTMLDivElement>('#config-error-dialog')!
+const configErrorCloseButton = document.querySelector<HTMLButtonElement>('#config-error-close-button')!
+const configErrorMessage = document.querySelector<HTMLDivElement>('#config-error-message')!
 
 // ============================================================================
 // IndexedDB管理
@@ -231,6 +234,21 @@ function showWebGPUErrorDialog(): void {
 // WebGPUエラーダイアログを閉じる関数
 function closeWebGPUErrorDialog(): void {
     errorDialog.style.display = 'none'
+}
+
+// 設定エラーダイアログを表示する関数
+function showConfigErrorDialog(message: string): void {
+    configErrorMessage.textContent = message
+    configErrorDialog.style.display = 'flex'
+    // アプリケーションの入力要素を無効化
+    sendButton.disabled = true
+    messageInput.disabled = true
+    modelSelect.disabled = true
+}
+
+// 設定エラーダイアログを閉じる関数
+function closeConfigErrorDialog(): void {
+    configErrorDialog.style.display = 'none'
 }
 
 function validateMessage(message: string): { valid: boolean; error?: string } {
@@ -541,7 +559,12 @@ async function initialize(): Promise<void> {
             statusElement.textContent = 'プロンプト設定の読み込み完了'
         } catch (promptError) {
             console.error('Prompt configuration loading error:', promptError)
-            statusElement.textContent = 'プロンプト設定の読み込みに失敗しました（デフォルト設定を使用）'
+            const errorMessage =
+                promptError instanceof Error
+                    ? promptError.message
+                    : 'プロンプト設定の読み込みに失敗しました'
+            showConfigErrorDialog(errorMessage)
+            throw promptError
         }
 
         // RAGコンテキストを初期化
@@ -608,6 +631,11 @@ clearButton.addEventListener('click', async () => {
 // WebGPUエラーダイアログのクローズボタン
 dialogCloseButton.addEventListener('click', () => {
     closeWebGPUErrorDialog()
+})
+
+// 設定エラーダイアログのクローズボタン
+configErrorCloseButton.addEventListener('click', () => {
+    closeConfigErrorDialog()
 })
 
 initialize().catch((error) => {

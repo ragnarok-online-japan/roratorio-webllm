@@ -60,6 +60,23 @@
       </div>
     </div>
 
+    <!-- 設定エラーダイアログ -->
+    <div id="config-error-dialog" class="dialog-overlay" style="display: none;">
+      <div class="dialog-content">
+        <h2>設定不良</h2>
+        <p id="config-error-message">設定の読み込みに失敗しました。</p>
+        <div class="dialog-details">
+          <p>以下をご確認ください:</p>
+          <ul>
+            <li>ネットワーク接続を確認してください</li>
+            <li>ブラウザのコンソールを確認してください</li>
+            <li>ページをリロードしてもう一度お試しください</li>
+          </ul>
+        </div>
+        <button id="config-error-close-button" class="dialog-button">了解</button>
+      </div>
+    </div>
+
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

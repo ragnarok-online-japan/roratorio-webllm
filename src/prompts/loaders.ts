@@ -124,47 +124,12 @@ export async function loadPromptConfig(): Promise<PromptConfig> {
         return config
     } catch (error) {
         console.error('[Prompts] Failed to load configuration:', error)
-        // フォールバック設定を返す
-        return {
-            system_prompt: getDefaultSystemPrompt(),
-            injection_detection: {
-                enabled: true,
-                keywords: getDefaultInjectionKeywords(),
-                danger_threshold: 0.5,
-                actions: {
-                    notify: true,
-                    log: true,
-                    block: true,
-                },
-            },
-        }
+        const errorMessage =
+            error instanceof Error
+                ? error.message
+                : 'Unknown error occurred'
+        throw new Error(`プロンプト設定の読み込みに失敗しました。設定を確認してください。[${errorMessage}]`)
     }
-}
-
-/**
- * デフォルトのシステムプロンプトを取得
- */
-function getDefaultSystemPrompt(): string {
-    return `あなたはラグナロクオンライン（Ragnarok Online）の専門家チャットボットです。
-ラグナロクオンラインに関する質問のみに答えてください。
-現実世界の話題と混同せず、ゲーム内容に関する質問に限定してください。`
-}
-
-/**
- * デフォルトのインジェクション検知キーワードを取得
- */
-function getDefaultInjectionKeywords(): string[] {
-    return [
-        'ignore previous',
-        '無視してください',
-        'system prompt',
-        'システムプロンプト',
-        'override',
-        '上書き',
-        'execute code',
-        'eval',
-        '###',
-    ]
 }
 
 /**
