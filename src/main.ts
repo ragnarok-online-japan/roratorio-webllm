@@ -3,6 +3,13 @@ import * as webllm from '@mlc-ai/web-llm'
 import { initializeRAGContext } from './rag/loaders'
 import { searchAll } from './rag/rag'
 import type { RAGContext } from './rag/types'
+import {
+    loadPromptConfig,
+    compileMessageWithSystemPrompt,
+    getInjectionWarningMessage,
+    shouldBlockMessage,
+} from './prompts/loaders'
+import type { PromptConfig } from './prompts/types'
 
 // セキュリティ設定
 const SECURITY_CONFIG = {
@@ -39,6 +46,7 @@ interface AppState {
     requestCount: number
     db: IDBDatabase | null
     ragContext: RAGContext | null
+    promptConfig: PromptConfig | null
 }
 
 const AVAILABLE_MODELS = [
@@ -55,6 +63,7 @@ const state: AppState = {
     requestCount: 0,
     db: null,
     ragContext: null,
+    promptConfig: null,
 }
 
 // DOM要素の取得
@@ -349,7 +358,32 @@ async function initializeEngine(): Promise<void> {
 
 // メッセージ送信
 async function sendMessage(userMessage: string): Promise<void> {
-    if (!state.engine) return
+    if (!state.engine || !state.promptConfig) return
+
+    // プロンプトインジェクション検知
+    const messageWithPrompt = compileMessageWithSystemPrompt(
+        state.promptConfig.system_prompt,
+        userMessage,
+        state.promptConfig
+    )
+
+    if (messageWithPrompt.injectionDetection.isDetected) {
+        // インジェクション検知時の処理
+        if (state.promptConfig.injection_detection.actions.notify) {
+            renderMessage(
+                'assistant',
+                getInjectionWarningMessage(messageWithPrompt.injectionDetection)
+            )
+        }
+
+        if (shouldBlockMessage(
+            messageWithPrompt.injectionDetection,
+            state.promptConfig
+        )) {
+            statusElement.textContent = 'セキュリティ警告: メッセージを処理できません'
+            return
+        }
+    }
 
     // レート制限チェック
     const rateLimit = getRateLimitStatus()
@@ -397,21 +431,28 @@ async function sendMessage(userMessage: string): Promise<void> {
             }
         }
 
-        // LLMのメッセージ配列を構築（RAGコンテキスト付き）
-        const messagesForLLM = state.messages.map((msg, index) => {
-            if (index === state.messages.length - 1 && msg.role === 'user') {
-                return {
-                    ...msg,
-                    content: msg.content + ragContextMessage,
+        // LLMのメッセージ配列を構築
+        // システムプロンプト + チャット履歴 + RAGコンテキスト
+        const messagesForLLM: Array<{ role: string; content: string }> = [
+            {
+                role: 'system',
+                content: state.promptConfig.system_prompt,
+            },
+            ...state.messages.map((msg, index) => {
+                if (index === state.messages.length - 1 && msg.role === 'user') {
+                    return {
+                        ...msg,
+                        content: msg.content + ragContextMessage,
+                    }
                 }
-            }
-            return msg
-        })
+                return msg
+            }),
+        ]
 
         // タイムアウトラッパー付きで実行
         const response = await Promise.race([
             state.engine.chat.completions.create({
-                messages: messagesForLLM,
+                messages: messagesForLLM as any,
                 temperature: 0.7,
                 max_tokens: 512,
             }),
@@ -478,6 +519,17 @@ async function initialize(): Promise<void> {
 
         // IndexedDB初期化
         await initializeDatabase()
+
+        // プロンプト設定を読み込み
+        try {
+            statusElement.textContent = 'プロンプト設定を読み込み中...'
+            state.promptConfig = await loadPromptConfig()
+            console.log('[App] Prompt configuration loaded successfully')
+            statusElement.textContent = 'プロンプト設定の読み込み完了'
+        } catch (promptError) {
+            console.error('Prompt configuration loading error:', promptError)
+            statusElement.textContent = 'プロンプト設定の読み込みに失敗しました（デフォルト設定を使用）'
+        }
 
         // RAGコンテキストを初期化
         try {
