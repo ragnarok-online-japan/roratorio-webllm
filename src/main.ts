@@ -61,6 +61,7 @@ const statusElement = document.querySelector<HTMLDivElement>('#status')!
 const clearButton = document.querySelector<HTMLButtonElement>('#clear-button')!
 const errorDialog = document.querySelector<HTMLDivElement>('#error-dialog')!
 const dialogCloseButton = document.querySelector<HTMLButtonElement>('#dialog-close-button')!
+const spinnerContainer = document.querySelector<HTMLDivElement>('#spinner-container')!
 
 // ============================================================================
 // IndexedDB管理
@@ -335,6 +336,16 @@ async function initializeEngine(): Promise<void> {
     }
 }
 
+// スピナーを表示
+function showSpinner(): void {
+    spinnerContainer.style.display = 'flex'
+}
+
+// スピナーを非表示
+function hideSpinner(): void {
+    spinnerContainer.style.display = 'none'
+}
+
 // メッセージ送信
 async function sendMessage(userMessage: string): Promise<void> {
     if (!state.engine) return
@@ -349,6 +360,7 @@ async function sendMessage(userMessage: string): Promise<void> {
     state.isLoading = true
     sendButton.disabled = true
     messageInput.value = ''
+    showSpinner()
 
     // ユーザーメッセージを追加
     state.messages.push({ role: 'user', content: userMessage })
@@ -401,6 +413,7 @@ async function sendMessage(userMessage: string): Promise<void> {
     } finally {
         state.isLoading = false
         sendButton.disabled = false
+        hideSpinner()
         messageInput.focus()
     }
 }
