@@ -229,7 +229,7 @@ export const RAG_CONFIG = {
     CACHE_DB_NAME: 'RoDataCache',
     CACHE_DB_VERSION: 1,
     CACHE_STORE_NAME: 'rawData',
-    CACHE_TTL_MS: 7 * 24 * 60 * 60 * 1000, // 7日間
+    CACHE_TTL_MS: 24 * 60 * 60 * 1000, // 24時間
     SEARCH_MAX_RESULTS: {
         items: 5,
         skills: 5,
