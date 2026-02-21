@@ -11,10 +11,19 @@ importers:
 
   .:
     dependencies:
+      '@hpcc-js/wasm-zstd':
+        specifier: ^1.12.0
+        version: 1.12.0
       '@mlc-ai/web-llm':
         specifier: ^0.2.81
         version: 0.2.81
+      js-yaml:
+        specifier: ^4.1.0
+        version: 4.1.1
     devDependencies:
+      '@types/js-yaml':
+        specifier: ^4.0.9
+        version: 4.0.9
       typescript:
         specifier: ~5.9.3
         version: 5.9.3
@@ -32,6 +41,9 @@ packages:
 
   '@emnapi/wasi-threads@1.1.0':
     resolution: {integrity: sha512-WI0DdZ8xFSbgMjR1sFsKABJ/C5OnRrjT06JXbZKexJGrDuPTzZdDYfFlsgcCXCyf+suG5QU2e/y1Wo2V/OapLQ==}
+
+  '@hpcc-js/wasm-zstd@1.12.0':
+    resolution: {integrity: sha512-sVCjc0uEfdoEarXNxkHkoKZEdIOv1k8uCgh0lsBUKjDkF6oeuZl2mcZICLkfwOvrPi44c9GYeBdNftH+A4QRVg==}
 
   '@mlc-ai/web-llm@0.2.81':
     resolution: {integrity: sha512-V2zdaHeCfv7KjnN6WOrt85v6tfefDVyTvWXZ5IN7OXu21Ee1hDg/jQu3ANWN/wjy2qdhVD16cAhoNpnxqyf+Gg==}
@@ -133,6 +145,12 @@ packages:
   '@tybys/wasm-util@0.10.1':
     resolution: {integrity: sha512-9tTaPJLSiejZKx+Bmog4uSubteqTvFrVrURwkmHixBo0G4seD0zUxp98E1DzUBJxLQ3NPwXrGKDiVjwx/DpPsg==}
 
+  '@types/js-yaml@4.0.9':
+    resolution: {integrity: sha512-k4MGaQl5TGo/iipqb2UDG2UwjXziSWkh0uysQelTlJpX1qGlpUZYm8PnO4DxG1qBomtJUdYJ6qR6xdIah10JLg==}
+
+  argparse@2.0.1:
+    resolution: {integrity: sha512-8+9WqebbFzpX9OR+Wa6O29asIogeRMzcGtAINdpMHHyAg10f05aSFVBbcEqGf/PXw1EjAZ+q2/bEBg3DvurK3Q==}
+
   detect-libc@2.1.2:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
     engines: {node: '>=8'}
@@ -150,6 +168,10 @@ packages:
     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
     os: [darwin]
+
+  js-yaml@4.1.1:
+    resolution: {integrity: sha512-qQKT4zQxXl8lLwBtHMWwaTcGfFOZviOJet3Oy/xmGk2gZH677CJM9EvtfdSkgWcATZhj/55JZ0rmy3myCT5lsA==}
+    hasBin: true
 
   lightningcss-android-arm64@1.31.1:
     resolution: {integrity: sha512-HXJF3x8w9nQ4jbXRiNppBCqeZPIAfUo8zE/kOEGbW5NZvGc/K7nMxbhIr+YlFlHW5mpbg/YFPdbnCh1wAXCKFg==}
@@ -327,6 +349,8 @@ snapshots:
       tslib: 2.8.1
     optional: true
 
+  '@hpcc-js/wasm-zstd@1.12.0': {}
+
   '@mlc-ai/web-llm@0.2.81':
     dependencies:
       loglevel: 1.9.2
@@ -390,6 +414,10 @@ snapshots:
       tslib: 2.8.1
     optional: true
 
+  '@types/js-yaml@4.0.9': {}
+
+  argparse@2.0.1: {}
+
   detect-libc@2.1.2: {}
 
   fdir@6.5.0(picomatch@4.0.3):
@@ -398,6 +426,10 @@ snapshots:
 
   fsevents@2.3.3:
     optional: true
+
+  js-yaml@4.1.1:
+    dependencies:
+      argparse: 2.0.1
 
   lightningcss-android-arm64@1.31.1:
     optional: true

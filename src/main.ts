@@ -1,5 +1,8 @@
 import './style.css'
 import * as webllm from '@mlc-ai/web-llm'
+import { initializeRAGContext } from './rag/loaders'
+import { searchAll } from './rag/rag'
+import type { RAGContext } from './rag/types'
 
 // セキュリティ設定
 const SECURITY_CONFIG = {
@@ -35,6 +38,7 @@ interface AppState {
     selectedModel: string
     requestCount: number
     db: IDBDatabase | null
+    ragContext: RAGContext | null
 }
 
 const AVAILABLE_MODELS = [
@@ -50,6 +54,7 @@ const state: AppState = {
     selectedModel: AVAILABLE_MODELS[0],
     requestCount: 0,
     db: null,
+    ragContext: null,
 }
 
 // DOM要素の取得
@@ -363,10 +368,42 @@ async function sendMessage(userMessage: string): Promise<void> {
     try {
         state.requestCount++
 
+        // RAG検索を実行（コンテキスト情報を取得）
+        let ragContextMessage = ''
+        if (state.ragContext) {
+            try {
+                const ragResults = searchAll(state.ragContext, userMessage, {
+                    items: 3,
+                    skills: 2,
+                    jobs: 1,
+                })
+                if (ragResults.totalResults > 0) {
+                    ragContextMessage = `\n\n【ラグナロクオンライン情報】\n${ragResults.results
+                        .slice(0, 5)
+                        .map((r) => `- ${r.name} (${r.type}): ${r.matchReason}`)
+                        .join('\n')}`
+                }
+            } catch (ragError) {
+                console.error('RAG search error:', ragError)
+                // RAGエラーはスキップして続行
+            }
+        }
+
+        // LLMのメッセージ配列を構築（RAGコンテキスト付き）
+        const messagesForLLM = state.messages.map((msg, index) => {
+            if (index === state.messages.length - 1 && msg.role === 'user') {
+                return {
+                    ...msg,
+                    content: msg.content + ragContextMessage,
+                }
+            }
+            return msg
+        })
+
         // タイムアウトラッパー付きで実行
         const response = await Promise.race([
             state.engine.chat.completions.create({
-                messages: state.messages,
+                messages: messagesForLLM,
                 temperature: 0.7,
                 max_tokens: 512,
             }),
@@ -433,6 +470,17 @@ async function initialize(): Promise<void> {
 
         // IndexedDB初期化
         await initializeDatabase()
+
+        // RAGコンテキストを初期化
+        try {
+            statusElement.textContent = 'RAGデータを読み込み中...'
+            state.ragContext = await initializeRAGContext(state.db || undefined)
+            statusElement.textContent = 'RAGデータの読み込み完了'
+        } catch (ragError) {
+            console.error('RAG initialization error:', ragError)
+            statusElement.textContent = 'RAGデータの読み込みに失敗しました（メッセージ送信は可能）'
+            // RAGのエラーはスキップして続行
+        }
 
         // 過去の会話を読み込み
         const savedMessages = await loadMessages()

@@ -9,6 +9,7 @@
         "preview": "vite preview"
     },
     "devDependencies": {
+        "@types/js-yaml": "^4.0.9",
         "typescript": "~5.9.3",
         "vite": "8.0.0-beta.15"
     },
@@ -18,6 +19,8 @@
         }
     },
     "dependencies": {
-        "@mlc-ai/web-llm": "^0.2.81"
+        "@hpcc-js/wasm-zstd": "^1.12.0",
+        "@mlc-ai/web-llm": "^0.2.81",
+        "js-yaml": "^4.1.0"
     }
 }
