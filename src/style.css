@@ -5,7 +5,7 @@
 
     color-scheme: light dark;
     color: rgba(255, 255, 255, 0.87);
-    background-color: #0f0f0f;
+    background-color: #dddddd;
 
     font-synthesis: none;
     text-rendering: optimizeLegibility;
@@ -22,7 +22,7 @@ body {
     padding: 0;
     min-width: 320px;
     min-height: 100vh;
-    background-color: #0f0f0f;
+    background-color: #dddddd;
 }
 
 .app-container {
@@ -37,7 +37,7 @@ body {
 .header {
     padding: 1.5rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #ff8100 0%, #814100 100%);
 }
 
 .header h1 {
@@ -441,4 +441,14 @@ button:focus-visible {
     .dialog-details a {
         color: #0066cc;
     }
+}
+
+/* モデル選択を非表示 */
+#model-select {
+    display: none;
+}
+
+/* モデル選択ラベルも非表示 */
+label[for="model-select"] {
+    display: none;
 }
