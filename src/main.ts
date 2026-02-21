@@ -14,7 +14,7 @@ const SECURITY_CONFIG = {
 
 // IndexedDB設定
 const DB_CONFIG = {
-    DB_NAME: 'WebLLMChat',
+    DB_NAME: 'ROratorio-WebLLMChat',
     DB_VERSION: 1,
     STORE_NAME: 'messages',
     INDEX_NAME: 'timestamp',

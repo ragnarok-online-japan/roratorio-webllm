@@ -104,8 +104,19 @@ async function fetchAndDecompressZstd(url: string): Promise<string> {
 function parseYaml<T>(content: string): T[] {
     try {
         const parsed = YAML.load(content)
+
+        // ルートがオブジェクトの場合、その値から配列を抽出
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+            // オブジェクトの最初の値を取得（配列であると仮定）
+            const values = Object.values(parsed)
+            if (values.length > 0 && Array.isArray(values[0])) {
+                console.log('[RAG] YAML root is object, extracting array from first property')
+                return values[0] as T[]
+            }
+        }
+
         if (!Array.isArray(parsed)) {
-            console.warn('[RAG] YAML parse result is not an array')
+            console.warn('[RAG] YAML parse result is not an array:', typeof parsed)
             return []
         }
         return parsed as T[]
