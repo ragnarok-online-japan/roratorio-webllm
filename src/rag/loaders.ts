@@ -78,12 +78,9 @@ async function zstdDecompressString(compressed: Uint8Array): Promise<string | nu
  * zstd圧縮ファイルを取得・解凍
  */
 async function fetchAndDecompressZstd(url: string): Promise<string> {
-    console.log(`[RAG] Fetching from ${url}`)
-
     try {
         // ファイルを取得
         const compressed = await loadFileAsUint8Array(url)
-        console.log(`[RAG] Decompressing ${compressed.byteLength} bytes`)
 
         // zstdで展開して文字列に変換
         const text = await zstdDecompressString(compressed)
@@ -111,7 +108,6 @@ function parseYaml<T>(content: string): T[] {
         if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
             const values = Object.values(parsed)
             if (values.length > 0) {
-                console.log(`[RAG] Converted object with ${values.length} entries to array`)
                 return values as T[]
             }
         }
@@ -121,7 +117,6 @@ function parseYaml<T>(content: string): T[] {
             return parsed as T[]
         }
 
-        console.warn('[RAG] YAML parse result is neither object nor array:', typeof parsed)
         return []
     } catch (error) {
         console.error('[RAG] YAML parse error:', error)
@@ -201,7 +196,6 @@ export async function loadItems(db?: IDBDatabase): Promise<ItemDataParameter[]> 
         if (db) {
             const cached = await getCachedData<ItemDataParameter[]>(db, 'items')
             if (cached) {
-                console.log('[RAG] Items loaded from cache')
                 return cached
             }
         }
@@ -215,7 +209,6 @@ export async function loadItems(db?: IDBDatabase): Promise<ItemDataParameter[]> 
             await setCacheData(db, 'items', items).catch(console.error)
         }
 
-        console.log(`[RAG] Loaded ${items.length} items`)
         return items
     } catch (error) {
         console.error('[RAG] Failed to load items:', error)

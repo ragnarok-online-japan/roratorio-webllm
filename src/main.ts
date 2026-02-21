@@ -384,24 +384,17 @@ async function sendMessage(userMessage: string): Promise<void> {
                     skills: 2,
                     jobs: 1,
                 })
-                console.log(`[App] RAG search executed: ${ragResults.totalResults} results found`)
-                console.log(`[App] RAG search details:`, ragResults)
 
                 if (ragResults.totalResults > 0) {
                     ragContextMessage = `\n\n【ラグナロクオンライン情報】\n${ragResults.results
                         .slice(0, 5)
                         .map((r) => `- ${r.name} (${r.type}): ${r.matchReason}`)
                         .join('\n')}`
-                    console.log(`[App] RAG context message added to LLM prompt:`, ragContextMessage)
-                } else {
-                    console.log('[App] No RAG results found for query:', userMessage)
                 }
             } catch (ragError) {
                 console.error('RAG search error:', ragError)
                 // RAGエラーはスキップして続行
             }
-        } else {
-            console.warn('[App] RAGContext not available')
         }
 
         // LLMのメッセージ配列を構築（RAGコンテキスト付き）
