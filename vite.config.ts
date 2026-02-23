@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 
 export default defineConfig({
-    base: '/webllm-vanilla-framework/',
+    base: '/',
     build: {
         outDir: 'dist',
         emptyOutDir: true,
