@@ -83,7 +83,9 @@ function parseYaml(yamlText: string): Record<string, any> {
 export async function loadPromptConfig(): Promise<PromptConfig> {
     try {
         // publicフォルダからYAMLファイルを取得
-        const response = await fetch('/prompts.yaml')
+        const baseUrl = (import.meta.env.BASE_URL || '/').replace(/\/$/, '')
+        const promptUrl = `${baseUrl}/prompts.yaml`
+        const response = await fetch(promptUrl)
 
         if (!response.ok) {
             throw new Error(
