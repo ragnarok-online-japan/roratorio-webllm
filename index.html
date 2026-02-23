@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ROラトリオ WebLLM</title>
+    <script type="module" crossorigin src="/roratorio-webllm/assets/index-BtSubns_.js"></script>
+    <link rel="stylesheet" crossorigin href="/roratorio-webllm/assets/index-B_q8kh4A.css">
+  </head>
+  <body>
+    <div id="app" class="app-container">
+      <div class="header">
+        <h1>ROラトリオ WebLLM</h1>
+        <div class="controls">
+          <label for="model-select">モデル選択:</label>
+          <select id="model-select"></select>
+          <button id="clear-button" class="clear-button" title="会話履歴をクリア">🗑️ 会話履歴をクリア</button>
+        </div>
+      </div>
+
+      <div class="status-bar">
+        <div id="status">初期化中...</div>
+      </div>
+
+      <div class="main-content">
+        <div id="chat-stats-panel" class="chat-stats-panel">
+          <div class="stats-header">
+            <h3>Chat Stats</h3>
+          </div>
+          <div class="stats-content">
+            <div class="stat-item">
+              <label>Prompt:</label>
+              <span id="stat-prompt">-</span>
+            </div>
+            <div class="stat-item">
+              <label>Completion:</label>
+              <span id="stat-completion">-</span>
+            </div>
+            <div class="stat-item">
+              <label>Total:</label>
+              <span id="stat-total">-</span>
+            </div>
+            <div class="stat-item">
+              <label>Prefill:</label>
+              <span id="stat-prefill">-</span>
+            </div>
+            <div class="stat-item">
+              <label>Decoding:</label>
+              <span id="stat-decoding">-</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="chat-messages" class="chat-messages"></div>
+      </div>
+
+      <div id="spinner-container" class="spinner-container" style="display: none;">
+        <div class="spinner"></div>
+      </div>
+
+      <div class="input-section">
+        <textarea
+          id="message-input"
+          class="message-input"
+          placeholder="メッセージを入力してください..."
+          rows="3"
+        ></textarea>
+        <button id="send-button" class="send-button" disabled>送信</button>
+      </div>
+    </div>
+
+    <!-- WebGPU利用不可ダイアログ -->
+    <div id="error-dialog" class="dialog-overlay" style="display: none;">
+      <div class="dialog-content">
+        <h2>WebGPUが利用できません</h2>
+        <p>このブラウザではサービスを利用できません。</p>
+        <div class="dialog-details">
+          <p><strong>原因:</strong></p>
+          <ul>
+            <li>お使いのブラウザがWebGPUに対応していない</li>
+            <li>GPUドライバが正しくインストールされていない</li>
+            <li>GPUハードウェアがシステムに接続されていない</li>
+            <li>ブラウザの設定でWebGPUが無効になっている</li>
+          </ul>
+          <p><strong>解決方法:</strong></p>
+          <ul>
+            <li>最新版のブラウザ (Chrome, Edge など) にアップデートしてください</li>
+            <li>GPUドライバを最新版に更新してください</li>
+            <li><a href="https://webgpureport.org/" target="_blank" rel="noopener noreferrer">WebGPU互換性チェック</a>を確認してください</li>
+          </ul>
+        </div>
+        <button id="dialog-close-button" class="dialog-button">了解</button>
+      </div>
+    </div>
+
+    <!-- 設定エラーダイアログ -->
+    <div id="config-error-dialog" class="dialog-overlay" style="display: none;">
+      <div class="dialog-content">
+        <h2>設定不良</h2>
+        <p id="config-error-message">設定の読み込みに失敗しました。</p>
+        <div class="dialog-details">
+          <p>以下をご確認ください:</p>
+          <ul>
+            <li>ネットワーク接続を確認してください</li>
+            <li>ブラウザのコンソールを確認してください</li>
+            <li>ページをリロードしてもう一度お試しください</li>
+          </ul>
+        </div>
+        <button id="config-error-close-button" class="dialog-button">了解</button>
+      </div>
+    </div>
+
+  </body>
+</html>
