@@ -77,6 +77,7 @@ pnpm build
 - **Llama-3.1-8B-Instruct-q4f32_1-MLC**: 最高精度（推奨）
 - **Mistral-7B-Instruct-v0.3-q4f32_1-MLC**: バランス型
 - **NeuralHermes-2.5-Mistral-7B-q4f16_1-MLC**: スリム・軽量
+- **gemma-2-2b-jpn-it-q4f16_1-MLC**: 超軽量・日本語特化
 
 ## 🔒 セキュリティ機能
 

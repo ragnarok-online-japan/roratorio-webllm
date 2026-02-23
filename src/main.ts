@@ -10,6 +10,8 @@ import {
     shouldBlockMessage,
 } from './prompts/loaders'
 import type { PromptConfig } from './prompts/types'
+import { marked } from 'marked'
+import DOMPurify from 'dompurify'
 
 // セキュリティ設定
 const SECURITY_CONFIG = {
@@ -38,6 +40,13 @@ interface StoredMessage extends Message {
     timestamp: number
 }
 
+interface ChatStats {
+    promptTokens: number
+    completionTokens: number
+    prefillSpeed: number | null
+    decodingSpeed: number | null
+}
+
 interface AppState {
     engine: webllm.MLCEngine | null
     messages: Message[]
@@ -47,9 +56,11 @@ interface AppState {
     db: IDBDatabase | null
     ragContext: RAGContext | null
     promptConfig: PromptConfig | null
+    lastStats: ChatStats | null
 }
 
 const AVAILABLE_MODELS = [
+    'gemma-2-2b-jpn-it-q4f16_1-MLC',
     'Llama-3.1-8B-Instruct-q4f32_1-MLC',
     // 'Mistral-7B-Instruct-v0.3-q4f32_1-MLC', //Disabled
     // 'NeuralHermes-2.5-Mistral-7B-q4f16_1-MLC', //Disabled
@@ -64,6 +75,7 @@ const state: AppState = {
     db: null,
     ragContext: null,
     promptConfig: null,
+    lastStats: null,
 }
 
 // DOM要素の取得
@@ -79,6 +91,11 @@ const spinnerContainer = document.querySelector<HTMLDivElement>('#spinner-contai
 const configErrorDialog = document.querySelector<HTMLDivElement>('#config-error-dialog')!
 const configErrorCloseButton = document.querySelector<HTMLButtonElement>('#config-error-close-button')!
 const configErrorMessage = document.querySelector<HTMLDivElement>('#config-error-message')!
+const statPrompt = document.querySelector<HTMLSpanElement>('#stat-prompt')!
+const statCompletion = document.querySelector<HTMLSpanElement>('#stat-completion')!
+const statTotal = document.querySelector<HTMLSpanElement>('#stat-total')!
+const statPrefill = document.querySelector<HTMLSpanElement>('#stat-prefill')!
+const statDecoding = document.querySelector<HTMLSpanElement>('#stat-decoding')!
 
 // ============================================================================
 // IndexedDB管理
@@ -249,6 +266,19 @@ function showConfigErrorDialog(message: string): void {
 // 設定エラーダイアログを閉じる関数
 function closeConfigErrorDialog(): void {
     configErrorDialog.style.display = 'none'
+}
+
+// Chat Stats更新関数
+function updateChatStats(stats: ChatStats): void {
+    state.lastStats = stats
+
+    statPrompt.textContent = String(stats.promptTokens)
+    statCompletion.textContent = String(stats.completionTokens)
+    statTotal.textContent = String(stats.promptTokens + stats.completionTokens)
+    statPrefill.textContent =
+        stats.prefillSpeed !== null ? `${stats.prefillSpeed.toFixed(1)} tok/s` : '-'
+    statDecoding.textContent =
+        stats.decodingSpeed !== null ? `${stats.decodingSpeed.toFixed(1)} tok/s` : '-'
 }
 
 function validateMessage(message: string): { valid: boolean; error?: string } {
@@ -479,12 +509,16 @@ async function sendMessage(userMessage: string): Promise<void> {
             }),
         ]
 
-        // タイムアウトラッパー付きで実行
-        const response = await Promise.race([
+        // タイムアウトラッパー付きでストリーミング実行
+        const stream = await Promise.race([
             state.engine.chat.completions.create({
                 messages: messagesForLLM as any,
                 temperature: 0.7,
                 max_tokens: 512,
+                stream: true,
+                stream_options: {
+                    include_usage: true,
+                },
             }),
             new Promise((_, reject) =>
                 setTimeout(
@@ -492,18 +526,61 @@ async function sendMessage(userMessage: string): Promise<void> {
                     SECURITY_CONFIG.MESSAGE_TIMEOUT_MS
                 )
             ),
-        ])
+        ]) as any
 
-        const completionsResponse = response as any
-        const assistantMessage =
-            completionsResponse.choices[0]?.message?.content ||
-            'エラーが発生しました'
+        let assistantMessage = ''
+        let lastMessageElement: HTMLDivElement | null = null
 
-        state.messages.push({ role: 'assistant', content: assistantMessage })
-        renderMessage('assistant', assistantMessage)
+        // ストリーミングレスポンスを処理
+        for await (const chunk of stream) {
+            const content = chunk.choices[0]?.delta?.content
+            if (content) {
+                assistantMessage += content
 
-        // IndexedDBに保存
-        await saveMessage({ role: 'assistant', content: assistantMessage })
+                // 初回メッセージ表示の場合
+                if (lastMessageElement === null) {
+                    lastMessageElement = document.createElement('div')
+                    lastMessageElement.className = 'message message-assistant'
+                    const contentDiv = document.createElement('div')
+                    contentDiv.className = 'message-content'
+                    contentDiv.textContent = content
+                    lastMessageElement.appendChild(contentDiv)
+                    chatMessages.appendChild(lastMessageElement)
+                } else {
+                    // 既存のメッセージにテキストを追加
+                    const contentDiv =
+                        lastMessageElement.querySelector('.message-content')
+                    if (contentDiv) {
+                        contentDiv.textContent = assistantMessage
+                    }
+                }
+                chatMessages.scrollTop = chatMessages.scrollHeight
+            }
+
+            // 最後のチャンクで統計情報を取得
+            if (chunk.usage) {
+                const promptTokens = chunk.usage.prompt_tokens || 0
+                const completionTokens = chunk.usage.completion_tokens || 0
+                const prefillSpeed =
+                    chunk.usage.extra?.prefill_tokens_per_s || null
+                const decodingSpeed =
+                    chunk.usage.extra?.decode_tokens_per_s || null
+
+                const stats: ChatStats = {
+                    promptTokens,
+                    completionTokens,
+                    prefillSpeed,
+                    decodingSpeed,
+                }
+                updateChatStats(stats)
+            }
+        }
+
+        // メッセージを保存
+        if (assistantMessage) {
+            state.messages.push({ role: 'assistant', content: assistantMessage })
+            await saveMessage({ role: 'assistant', content: assistantMessage })
+        }
 
         trimChatHistory()
     } catch (error) {
@@ -522,6 +599,55 @@ async function sendMessage(userMessage: string): Promise<void> {
     }
 }
 
+// Markdownを安全なHTMLに変換する関数
+function renderMarkdownString(markdown: string): DocumentFragment {
+    try {
+        // Markdownをパース
+        const parsed = marked(markdown, {
+            breaks: true,
+            gfm: true, // GitHub Flavored Markdownを有効化
+        })
+
+        if (parsed instanceof Promise) {
+            throw new Error('Async markdown rendering is not supported')
+        }
+
+        // DOMPurifyでサニタイズ（XSS対策）
+        let sanitized = DOMPurify.sanitize(parsed as string, {
+            ALLOWED_TAGS: [
+                'p', 'br', 'strong', 'em', 'u', 'del', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+                'blockquote', 'code', 'pre', 'ul', 'ol', 'li', 'a', 'img', 'table',
+                'thead', 'tbody', 'tr', 'th', 'td', 'hr',
+            ],
+            ALLOWED_ATTR: ['href', 'title', 'alt', 'src'],
+            KEEP_CONTENT: true,
+        })
+
+        // 不要な改行とbrタグを削除
+        sanitized = (sanitized as string)
+            .replace(/<p><br><\/p>/g, '') // 空のp+brを削除
+            .replace(/<p><\/p>/g, '') // 空のpを削除
+            .replace(/<br\s*\/?>\s*<br\s*\/?>/g, '<br>') // 連続するbrを1つに統合
+
+        // DocumentFragmentに変換
+        const fragment = document.createDocumentFragment()
+        const tempDiv = document.createElement('div')
+        tempDiv.innerHTML = sanitized as string
+        while (tempDiv.firstChild) {
+            fragment.appendChild(tempDiv.firstChild)
+        }
+
+        return fragment
+    } catch (error) {
+        console.error('Markdown rendering error:', error)
+        // エラー時はプレーンテキストを返す
+        const fragment = document.createDocumentFragment()
+        const textNode = document.createTextNode(markdown)
+        fragment.appendChild(textNode)
+        return fragment
+    }
+}
+
 // メッセージをUIに表示
 function renderMessage(role: 'user' | 'assistant', content: string): void {
     const messageDiv = document.createElement('div')
@@ -529,8 +655,14 @@ function renderMessage(role: 'user' | 'assistant', content: string): void {
 
     const contentDiv = document.createElement('div')
     contentDiv.className = 'message-content'
-    // XSS対策: textContentを使用（HTMLとして解析しない）
-    contentDiv.textContent = content
+
+    // Assistantメッセージはmarkdown対応、Userメッセージはテキストのまま
+    if (role === 'assistant') {
+        const markdownContent = renderMarkdownString(content)
+        contentDiv.appendChild(markdownContent)
+    } else {
+        contentDiv.textContent = content
+    }
 
     messageDiv.appendChild(contentDiv)
     chatMessages.appendChild(messageDiv)

@@ -221,3 +221,34 @@ IndexedDBキャッシュ: 未実装
 - ❌ IndexedDB RAGキャッシング（24時間TTL） - `RoDataCache` スキーマ未実装
 - ❌ UI最適化 - RAG結果の視覚的改善・スタイリング
 - ❌ テスト実装 - 単体テスト、E2Eテスト
+### Markdown表示機能
+実装日: 2026-02-23
+
+**実装内容:**
+- **Markdown対応**: `marked` ライブラリでMarkdownをHTMLに変換
+- **XSS対策**: `DOMPurify` を使用した厳密なサニタイズ
+- **許可タグ設定**: スクリプト実行を完全に防止し、フォーマットタグのみ許可
+- **エラーハンドリング**: Markdown解析失敗時はプレーンテキストで表示
+- **選別レンダリング**: ユーザーメッセージはテキスト、AIメッセージはMarkdownで表示
+
+**セキュリティ設定:**
+```typescript
+const PURIFY_CONFIG = {
+    ALLOWED_TAGS: [
+        'p', 'br', 'strong', 'em', 'u', 'del', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+        'blockquote', 'code', 'pre', 'ul', 'ol', 'li', 'a',
+        'img', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'hr'
+    ],
+    ALLOWED_ATTR: ['href', 'title', 'alt', 'src'],
+    KEEP_CONTENT: true,
+}
+```
+
+**主要機能:**
+- `renderMarkdownString()`: Markdownを安全なHTMLに変換
+- `renderMessage()`: ロール別の適切なレンダリング
+
+**対応フォーマット:**
+- 見出し（H1-H6）、段落、改行、強調、リンク、コードブロック
+- リスト（順序付き・非順序付き）、引用ブロック
+- テーブル、水平線

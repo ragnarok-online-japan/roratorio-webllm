@@ -20,7 +20,38 @@
         <div id="status">初期化中...</div>
       </div>
 
-      <div id="chat-messages" class="chat-messages"></div>
+      <div class="main-content">
+        <div id="chat-stats-panel" class="chat-stats-panel">
+          <div class="stats-header">
+            <h3>Chat Stats</h3>
+          </div>
+          <div class="stats-content">
+            <div class="stat-item">
+              <label>Prompt:</label>
+              <span id="stat-prompt">-</span>
+            </div>
+            <div class="stat-item">
+              <label>Completion:</label>
+              <span id="stat-completion">-</span>
+            </div>
+            <div class="stat-item">
+              <label>Total:</label>
+              <span id="stat-total">-</span>
+            </div>
+            <div class="stat-item">
+              <label>Prefill:</label>
+              <span id="stat-prefill">-</span>
+            </div>
+            <div class="stat-item">
+              <label>Decoding:</label>
+              <span id="stat-decoding">-</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="chat-messages" class="chat-messages"></div>
+      </div>
+
       <div id="spinner-container" class="spinner-container" style="display: none;">
         <div class="spinner"></div>
       </div>
