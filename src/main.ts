@@ -695,7 +695,9 @@ function renderMarkdownString(markdown: string): DocumentFragment {
         // キャッシュに保存（サイズ制限付き）
         if (markdownCache.size >= MAX_CACHE_SIZE) {
             const firstKey = markdownCache.keys().next().value
-            markdownCache.delete(firstKey)
+            if (firstKey !== undefined) {
+                markdownCache.delete(firstKey)
+            }
         }
         markdownCache.set(markdown, fragment.cloneNode(true) as DocumentFragment)
 
