@@ -530,6 +530,14 @@ async function sendMessage(userMessage: string): Promise<void> {
 
         let assistantMessage = ''
         let lastMessageElement: HTMLDivElement | null = null
+        let lastRenderTime = Date.now()
+        const RENDER_INTERVAL_MS = 300 // リアルタイムMarkdown更新の間隔
+
+        // スクロール位置の最適化フラグ
+        let needsScroll = false
+        // 前回のスクロール処理時刻
+        let lastScrollTime = Date.now()
+        const SCROLL_THROTTLE_MS = 100 // スクロール処理を抑制
 
         // ストリーミングレスポンスを処理
         for await (const chunk of stream) {
@@ -543,18 +551,37 @@ async function sendMessage(userMessage: string): Promise<void> {
                     lastMessageElement.className = 'message message-assistant'
                     const contentDiv = document.createElement('div')
                     contentDiv.className = 'message-content'
-                    contentDiv.textContent = content
                     lastMessageElement.appendChild(contentDiv)
                     chatMessages.appendChild(lastMessageElement)
-                } else {
-                    // 既存のメッセージにテキストを追加
+                    needsScroll = true
+                }
+
+                // 現在時刻を取得
+                const currentTime = Date.now()
+                const shouldRender = currentTime - lastRenderTime >= RENDER_INTERVAL_MS
+
+                // リアルタイムMarkdown処理：一定時間ごとに更新
+                if (shouldRender) {
                     const contentDiv =
                         lastMessageElement.querySelector('.message-content')
                     if (contentDiv) {
-                        contentDiv.textContent = assistantMessage
+                        // 既存のコンテンツをクリア
+                        contentDiv.innerHTML = ''
+                        // Markdownを処理して挿入
+                        const markdownContent = renderMarkdownString(assistantMessage)
+                        contentDiv.appendChild(markdownContent)
+                        lastRenderTime = currentTime
+                        needsScroll = true
                     }
                 }
-                chatMessages.scrollTop = chatMessages.scrollHeight
+
+                // スクロール処理をthrottle化
+                const currentScrollTime = Date.now()
+                if (needsScroll && currentScrollTime - lastScrollTime >= SCROLL_THROTTLE_MS) {
+                    chatMessages.scrollTop = chatMessages.scrollHeight
+                    needsScroll = false
+                    lastScrollTime = currentScrollTime
+                }
             }
 
             // 最後のチャンクで統計情報を取得
@@ -575,6 +602,19 @@ async function sendMessage(userMessage: string): Promise<void> {
                 updateChatStats(stats)
             }
         }
+
+        // ストリーミング終了後、最終的なMarkdownレンダリングを実行
+        if (assistantMessage && lastMessageElement) {
+            const contentDiv = lastMessageElement.querySelector('.message-content')
+            if (contentDiv) {
+                contentDiv.innerHTML = ''
+                const markdownContent = renderMarkdownString(assistantMessage)
+                contentDiv.appendChild(markdownContent)
+            }
+        }
+
+        // 最終スクロール
+        chatMessages.scrollTop = chatMessages.scrollHeight
 
         // メッセージを保存
         if (assistantMessage) {
@@ -599,9 +639,24 @@ async function sendMessage(userMessage: string): Promise<void> {
     }
 }
 
-// Markdownを安全なHTMLに変換する関数
+// Markdownキャッシュ（パフォーマンス最適化）
+const markdownCache = new Map<string, DocumentFragment>()
+const MAX_CACHE_SIZE = 100
+
+// Markdownを安全なHTMLに変換する関数（キャッシング機能付き）
 function renderMarkdownString(markdown: string): DocumentFragment {
     try {
+        // キャッシュから取得
+        if (markdownCache.has(markdown)) {
+            const cached = markdownCache.get(markdown)!
+            // DOMFragmentは再利用できないため複製を返す
+            const cloned = document.createDocumentFragment()
+            for (const node of cached.childNodes) {
+                cloned.appendChild(node.cloneNode(true))
+            }
+            return cloned
+        }
+
         // Markdownをパース
         const parsed = marked(markdown, {
             breaks: true,
@@ -637,6 +692,13 @@ function renderMarkdownString(markdown: string): DocumentFragment {
             fragment.appendChild(tempDiv.firstChild)
         }
 
+        // キャッシュに保存（サイズ制限付き）
+        if (markdownCache.size >= MAX_CACHE_SIZE) {
+            const firstKey = markdownCache.keys().next().value
+            markdownCache.delete(firstKey)
+        }
+        markdownCache.set(markdown, fragment.cloneNode(true) as DocumentFragment)
+
         return fragment
     } catch (error) {
         console.error('Markdown rendering error:', error)
@@ -666,7 +728,11 @@ function renderMessage(role: 'user' | 'assistant', content: string): void {
 
     messageDiv.appendChild(contentDiv)
     chatMessages.appendChild(messageDiv)
-    chatMessages.scrollTop = chatMessages.scrollHeight
+
+    // スクロール処理を次フレームに遅延させる（バッチ処理最適化）
+    requestAnimationFrame(() => {
+        chatMessages.scrollTop = chatMessages.scrollHeight
+    })
 }
 
 // 初期化
@@ -727,10 +793,28 @@ async function initialize(): Promise<void> {
         const savedMessages = await loadMessages()
         if (savedMessages.length > 0) {
             state.messages = savedMessages
-            // UIに表示
+            // バッチDOM操作で大量メッセージを効率的に表示
+            const fragment = document.createDocumentFragment()
             for (const message of savedMessages) {
-                renderMessage(message.role, message.content)
+                const messageDiv = document.createElement('div')
+                messageDiv.className = `message message-${message.role}`
+                const contentDiv = document.createElement('div')
+                contentDiv.className = 'message-content'
+
+                if (message.role === 'assistant') {
+                    const markdownContent = renderMarkdownString(message.content)
+                    contentDiv.appendChild(markdownContent)
+                } else {
+                    contentDiv.textContent = message.content
+                }
+                messageDiv.appendChild(contentDiv)
+                fragment.appendChild(messageDiv)
             }
+            chatMessages.appendChild(fragment)
+            // 初期化時のスクロール処理を次フレームに遅延させる
+            requestAnimationFrame(() => {
+                chatMessages.scrollTop = chatMessages.scrollHeight
+            })
             statusElement.textContent = `${savedMessages.length}件の過去の会話を読み込みました`
         }
 
