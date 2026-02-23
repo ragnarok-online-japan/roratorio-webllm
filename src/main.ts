@@ -61,7 +61,7 @@ interface AppState {
 
 const AVAILABLE_MODELS = [
     'gemma-2-2b-jpn-it-q4f16_1-MLC',
-    'Llama-3.1-8B-Instruct-q4f32_1-MLC',
+    // 'Llama-3.1-8B-Instruct-q4f32_1-MLC', //Disabled
     // 'Mistral-7B-Instruct-v0.3-q4f32_1-MLC', //Disabled
     // 'NeuralHermes-2.5-Mistral-7B-q4f16_1-MLC', //Disabled
 ] as const
